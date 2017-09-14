@@ -1,0 +1,37 @@
+{
+  "dependencies": {
+    "execa": "^0.8.0",
+    "inquirer": "^3.2.3",
+    "inquirer-autocomplete-prompt": "^0.11.1",
+    "pty.js": "^0.3.1",
+    "q": "^1.5.0"
+  },
+  "name": "spacey",
+  "description": "`mkdir -p ~/.ssh/.sockets/`",
+  "version": "4.2.0",
+  "preferGlobal": true,
+  "bin": {
+    "spacey": "index.js"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liamzebedee/spacey.git"
+  },
+  "keywords": [
+    "terminal",
+    "shell",
+    "utility",
+    "screen",
+    "tmux"
+  ],
+  "author": "Liam Edwards-Playne",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/liamzebedee/spacey/issues"
+  },
+  "homepage": "https://github.com/liamzebedee/spacey#readme"
+}

@@ -1,6 +1,8 @@
 spacey
 ======
 
+[![npm version](https://badge.fury.io/js/spaceyz@2x.png)](https://badge.fury.io/js/spaceyz)
+
 spacey makes it easier to just manage screens on remote servers.
  - automatically lists screens from any SSH-enabled server
  - smart ssh quickconnect w/ ControlPath

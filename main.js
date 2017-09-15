@@ -1,13 +1,42 @@
-var inquirer = require('inquirer');
-var execa = require('execa');
-var Q = require('q');
-const spawn = require('child_process').spawnSync;
+'use strict';
+const inquirer = require('inquirer');
+const execa = require('execa');
+const Q = require('q');
+const spawn = require('child_process').spawn;
+const stringArgv = require('string-argv');
+const EventEmitter = require('events');
+const debug = require('debug')('spacey')  
+const fs = require('fs')
+const path = require('path');
 
-servers = `
-liam@chilltech.ciphersink.net
-`.split('\n').filter(x => x);
 
-const screenRegex = /(\d+)\.(\S+)\s\((\S+\s\S+\s\S+)\)\s\((\S+)\)/;
+var servers = [];
+
+(function readConfig() {
+	const CONFIG_PATH = `${process.env.HOME}/.spacey`;
+	let data = fs.readFileSync(CONFIG_PATH, 'utf8');
+	servers = data.split('\n').filter(x => x);
+	debug(`Loaded servers from ~/.spacey:\n${servers}`)
+})()
+
+
+function connectSSH(host, cmd, interactive=false) {
+	let argv = stringArgv(`ssh ${host} -o ControlMaster=auto -o ControlPath=~/.ssh/.sockets/%r@%h-%p -o ControlPersist=600 -tt "${cmd}"`);
+
+	let dfd = Q.defer();
+	
+	execa(argv[0], argv.slice(1), {
+		shell: true,
+		stdio: interactive ? 'inherit' : null
+	}).then(promise => {
+		dfd.resolve({
+			output: promise.stdout,
+			server: host
+		})
+	}).catch(ex => console.error(ex))
+	
+	return dfd.promise;
+}
 
 
 if(process.argv[2] == 'new') {
@@ -16,46 +45,46 @@ if(process.argv[2] == 'new') {
 	chooseScreen()
 }
 
+// Full format
+// const SCREEN_REGEX = /(\d+)\.(\S+)\s\((\S+\s\S+\s\S+)\)\s\((\S+)\)/;
+// Loose format
+const SCREEN_REGEX = /(\d+)\.(\S+)\s\((\S+(\s){0,1}\S+(\s){0,1}\S+)\)/;
 
-
-function parseScreens(output) {
+function parseScreens(serverScreen) {
 	let screens = [];
-	output = output.split('\n');
+	try {
+		let server = serverScreen.server;
+		let output = serverScreen.output.split('\n');
 
-	let startReadingScreens = false;
-	for (var i = 0; i < output.length; i++) {
-		let line = output[i];
+		let startReadingScreens = false;
+		for (var i = 0; i < output.length; i++) {
+			let line = output[i];
 
-		if(line.startsWith("There are several suitable screens on:")) {
-			startReadingScreens = true;
-			continue;
-		}
+			if(line.startsWith("There are several suitable screens on:")) {
+				startReadingScreens = true;
+				continue;
+			}
 
-		if(startReadingScreens) {
-			try {
-				let [ _, pid, name, date, attached ] = screenRegex.exec(line)
+			if(startReadingScreens) {
+				let [ _, pid, name, _2, _3 ] = SCREEN_REGEX.exec(line)
 
 				screens.push({
+					server,
 					pid,
 					name,
-					date,
-					attached
+					fullname: `${pid}.${name}`,
+					// date,
+					// attached
 				})
-			} catch(ex) {}
-
+			}
 		}
-	}
+	} catch(ex) {
 
+	}
+	
 	return screens;
 }
 
-function getServerScreens() {
-	return servers.map(server => {
-		let sed = "sed 's/^[ \t]*//;s/[ \t]*$//'";
-
-		return execa.shell(`ssh -o ControlMaster=auto -o ControlPath=~/.ssh/.sockets/%r@%h-%p -o ControlPersist=600 -tt ${server} "screen -r | ${sed}"`);
-	})
-}
 
 function newScreen() {
 	inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
@@ -66,25 +95,30 @@ function newScreen() {
 	  message: 'Which server shall we connect to?',
 	  type: 'list',
 	  choices: servers.map(server => { return {
-	  	name: `${server}`
+		name: `${server}`
 	  }})
 	})
 	.then(answer => {
 		let screen = process.argv[3];
-
-		let remoteCommand = `ssh -o ControlMaster=auto -o ControlPath=~/.ssh/.sockets/%r@%h-%p -o ControlPersist=600 -tt ${servers[0]} "screen -S ${screen}"`;
-
-		spawn(remoteCommand, [], {
-			stdio: 'inherit',
-			shell: true
-		});
+		connectSSH(answer.server, `screen -S ${screen}`, true)
 	})
 }
 
+function getServerScreens() {
+	const sed = "sed 's/^[ \t]*//;s/[ \t]*$//'";
+	return servers.map(server => {
+		return connectSSH(server, `screen -r | ${sed}`, false)
+	})
+}
+
+
 function chooseScreen() {
 	Q.allSettled(getServerScreens())
-	.then(screenOutputs => {
-		let screens = screenOutputs.map(promise => parseScreens(promise.value.stdout)).reduce((pre, cur) => pre.concat(cur));
+	.then(serverScreens => {
+		let screens = [];
+		screens = serverScreens.map(promise => parseScreens(promise.value)).reduce((pre, cur) => pre.concat(cur));
+
+		debug(`Found screens:\n ${JSON.stringify(screens, null, 1)}`);
 
 		inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
 
@@ -94,21 +128,15 @@ function chooseScreen() {
 		  message: 'Open a screen:',
 		  type: 'list',
 		  choices: screens.map(screen => { return {
-		  	name: `${screen.name}`,
-		  	value: screen
+			name: `${screen.name}`,
+			value: screen
 		  }})
 		})
 	}).then(answer => {
 		try {
-			let remoteCommand = `ssh -o ControlMaster=auto -o ControlPath=~/.ssh/.sockets/%r@%h-%p -o ControlPersist=600 -tt ${servers[0]} "screen -r ${answer.screen.pid}"`;
-
-			spawn(remoteCommand, [], {
-				stdio: 'inherit',
-				shell: true
-			});
+			connectSSH(answer.screen.server, `screen -r ${answer.screen.fullname}`, true)
 		} catch(ex) { console.log(ex)}
 	});
-
 }
 
 

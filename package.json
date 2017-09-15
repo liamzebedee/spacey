@@ -1,17 +1,21 @@
 {
   "dependencies": {
+    "debug": "^3.0.1",
     "execa": "^0.8.0",
     "inquirer": "^3.2.3",
     "inquirer-autocomplete-prompt": "^0.11.1",
     "pty.js": "^0.3.1",
-    "q": "^1.5.0"
+    "q": "^1.5.0",
+    "split": "^1.0.1",
+    "string-argv": "^0.0.2"
   },
-  "name": "spacey",
+  "name": "spaceyz",
+  "main": "main.js",
   "description": "`mkdir -p ~/.ssh/.sockets/`",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "preferGlobal": true,
   "bin": {
-    "spacey": "index.js"
+    "spacey": "index.sh"
   },
   "devDependencies": {},
   "scripts": {

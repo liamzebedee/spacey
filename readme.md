@@ -1,3 +1,6 @@
+spacey
+======
+
 spacey makes it easier to just manage screens on remote servers.
  - automatically lists screens from any SSH-enabled server
  - smart ssh quickconnect w/ ControlPath
@@ -8,9 +11,19 @@ Commands:
 
 ![Demo GIF](demo.gif)
 
-# Install
-Incomplete.
+GPL v3 - Liam Edwards-Playne / @liamzebedee. <3 
 
+# Install
 ```
-mkdir -p ~/.ssh/.sockets/
+# Install
+npm i -G spaceyz
+
+# Setup your servers
+echo "liam@something.com" > ~/.spacey
+
+# Run spacey
+spacey
 ```
+
+## Troubleshooting
+`DEBUG=spacey spacey` prints debug information. The source is very simple, take a look.
